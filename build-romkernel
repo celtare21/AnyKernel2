@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Colorize and add text parameters
+red=$(tput setaf 1)             #  red
+grn=$(tput setaf 2)             #  green
+cya=$(tput setaf 6)             #  cyan
+txtbld=$(tput bold)             # Bold
+bldred=${txtbld}$(tput setaf 1) #  red
+bldgrn=${txtbld}$(tput setaf 2) #  green
+bldblu=${txtbld}$(tput setaf 4) #  blue
+bldcya=${txtbld}$(tput setaf 6) #  cyan
+txtrst=$(tput sgr0)             # Reset
+
+ROM="$1"
+DEVICE=mata
+GDRIVE="$3"
+ANYKERNEL="$4"
+
+CURRENT_PATH=$PWD
+ROM_PATH=/home/kurankaname211/aicp
+AK2_PATH=/home/kurankaname211/AnyKernel2
+BUILD_PATH=/home/kurankaname211/aicp/out/target/product/$DEVICE
+
+# AK2 zip name
+ZIPNAME="Artemis-$DEVICE-$(date +'%Y%m%d')"
+
+# Time of build startup
+res1=$(date +%s.%N)
+
+# Setup environment
+echo -e "${bldblu}Setting up build environment ${txtrst}"
+cd $ROM_PATH
+. build/envsetup.sh
+
+# Set the device
+breakfast "aicp_mata-userdebug"
+
+# Start compilation with log
+echo -e "${bldblu}Starting build kernel for $DEVICE and saving a build log file ${txtrst}"
+rm -f $BUILD_PATH/{boot.img,kernel}
+mka bootimage 2>&1 | tee buildkernel.log;
+
+# Go anykernel
+echo -e "${bldblu}Adding kernel to AnyKernel2 ${txtrst}"
+mv -f $BUILD_PATH/kernel $AK2_PATH/Image.gz-dtb
+cd $AK2_PATH
+zip -r9 $ZIPNAME.zip * --exclude=*README* --exclude=*.zip  $ZIPNAME.zip
+
+# Get elapsed time
+res2=$(date +%s.%N)
+echo "${bldgrn}Total time elapsed: ${txtrst}${grn}$(echo "($res2 - $res1) / 60"|bc ) minutes ($(echo "$res2 - $res1"|bc ) seconds) ${txtrst}"
+
+# Back to scripts folder
+cd $CURRENT_PATH
